@@ -6,14 +6,21 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "migrate:up": "node-pg-migrate up --envPath ../.env",
+    "migrate:down": "node-pg-migrate down --envPath ../.env",
+    "migrate:create": "node-pg-migrate create --envPath ../.env -j sql"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.5.0",
+    "@types/pg": "^8.21.0",
+    "node-pg-migrate": "^9.0.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.5.4"
   }
