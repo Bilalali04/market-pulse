@@ -1,7 +1,8 @@
 import { Router, Request, Response } from "express";
 import { isValidEmail, isValidPassword } from "../auth/validation";
 import { registerUser } from "../auth/register";
-import { EmailAlreadyRegisteredError } from "../auth/errors";
+import { loginUser } from "../auth/login";
+import { EmailAlreadyRegisteredError, InvalidCredentialsError } from "../auth/errors";
 
 export const authRouter = Router();
 
@@ -27,6 +28,27 @@ authRouter.post("/register", async (req: Request, res: Response) => {
       return;
     }
     console.error("registration failed:", err instanceof Error ? err.message : err);
+    res.status(500).json({ error: "internal server error" });
+  }
+});
+
+authRouter.post("/login", async (req: Request, res: Response) => {
+  const { email, password } = req.body ?? {};
+
+  if (typeof email !== "string" || typeof password !== "string") {
+    res.status(400).json({ error: "email and password are required" });
+    return;
+  }
+
+  try {
+    const token = await loginUser(email, password);
+    res.status(200).json({ token });
+  } catch (err) {
+    if (err instanceof InvalidCredentialsError) {
+      res.status(401).json({ error: "invalid credentials" });
+      return;
+    }
+    console.error("login failed:", err instanceof Error ? err.message : err);
     res.status(500).json({ error: "internal server error" });
   }
 });
