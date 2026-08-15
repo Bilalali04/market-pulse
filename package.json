@@ -1,0 +1,9 @@
+{
+  "name": "market-pulse",
+  "private": true,
+  "version": "0.0.1",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ]
+}
