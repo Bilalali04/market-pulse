@@ -50,3 +50,33 @@ export async function registerRequest(email: string, password: string): Promise<
 
   return response.json();
 }
+
+export interface PricePoint {
+  date: string;
+  closePrice: number;
+}
+
+export interface PriceHistoryResult {
+  symbol: string;
+  prices: PricePoint[];
+}
+
+export async function priceHistoryRequest(symbol: string, token: string): Promise<PriceHistoryResult> {
+  const response = await fetch(`${API_BASE_URL}/prices/${symbol}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (response.status === 404) {
+    throw new Error(`No price history available for ${symbol}.`);
+  }
+
+  if (response.status === 401) {
+    throw new Error("Your session has expired. Please log in again.");
+  }
+
+  if (!response.ok) {
+    throw new Error("Something went wrong loading price history. Please try again.");
+  }
+
+  return response.json();
+}
