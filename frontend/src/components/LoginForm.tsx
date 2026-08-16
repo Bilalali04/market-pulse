@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { loginRequest } from "../lib/api";
+import { setToken } from "../lib/token";
 import { FormField } from "./FormField";
 
 export function LoginForm() {
@@ -33,7 +34,7 @@ export function LoginForm() {
     setIsSubmitting(true);
     try {
       const { token } = await loginRequest(email, password);
-      localStorage.setItem("token", token);
+      setToken(token);
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
