@@ -80,3 +80,29 @@ export async function priceHistoryRequest(symbol: string, token: string): Promis
 
   return response.json();
 }
+
+export interface ScreeningResult {
+  symbol: string;
+  compliant: boolean;
+  reasons: string[];
+}
+
+export async function screenerRequest(symbol: string, token: string): Promise<ScreeningResult> {
+  const response = await fetch(`${API_BASE_URL}/screener/${symbol}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (response.status === 404) {
+    throw new Error(`No fundamentals data available for ${symbol}.`);
+  }
+
+  if (response.status === 401) {
+    throw new Error("Your session has expired. Please log in again.");
+  }
+
+  if (!response.ok) {
+    throw new Error("Something went wrong loading the compliance screen. Please try again.");
+  }
+
+  return response.json();
+}

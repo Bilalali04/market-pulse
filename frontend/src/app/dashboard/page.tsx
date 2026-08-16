@@ -4,23 +4,27 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RequireAuth } from "../../components/RequireAuth";
 import { PriceChart } from "../../components/PriceChart";
+import { ComplianceBadge } from "../../components/ComplianceBadge";
 import { clearToken, getToken } from "../../lib/token";
-import { priceHistoryRequest, PricePoint } from "../../lib/api";
+import { priceHistoryRequest, PricePoint, screenerRequest, ScreeningResult } from "../../lib/api";
 import { WATCHLIST } from "../../lib/watchlist";
 
 function DashboardContent() {
   const router = useRouter();
   const [symbol, setSymbol] = useState(WATCHLIST[0]);
   const [prices, setPrices] = useState<PricePoint[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoadingPrices, setIsLoadingPrices] = useState(true);
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [screeningResult, setScreeningResult] = useState<ScreeningResult | null>(null);
+  const [isLoadingScreening, setIsLoadingScreening] = useState(true);
+  const [screeningError, setScreeningError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadPrices() {
-      setIsLoading(true);
-      setError(null);
+      setIsLoadingPrices(true);
+      setPriceError(null);
       setPrices([]);
 
       const token = getToken();
@@ -35,16 +39,54 @@ function DashboardContent() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Something went wrong loading price history.");
+          setPriceError(err instanceof Error ? err.message : "Something went wrong loading price history.");
         }
       } finally {
         if (!cancelled) {
-          setIsLoading(false);
+          setIsLoadingPrices(false);
         }
       }
     }
 
     loadPrices();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [symbol]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadScreening() {
+      setIsLoadingScreening(true);
+      setScreeningError(null);
+      setScreeningResult(null);
+
+      const token = getToken();
+      if (!token) {
+        return;
+      }
+
+      try {
+        const result = await screenerRequest(symbol, token);
+        if (!cancelled) {
+          setScreeningResult(result);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setScreeningError(
+            err instanceof Error ? err.message : "Something went wrong loading the compliance screen."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingScreening(false);
+        }
+      }
+    }
+
+    loadScreening();
 
     return () => {
       cancelled = true;
@@ -82,9 +124,11 @@ function DashboardContent() {
           ))}
         </select>
 
-        {isLoading && <p className="text-sm text-gray-600">Loading price history...</p>}
-        {!isLoading && error && <p className="text-sm text-red-600">{error}</p>}
-        {!isLoading && !error && prices.length > 0 && <PriceChart data={prices} />}
+        <ComplianceBadge result={screeningResult} isLoading={isLoadingScreening} error={screeningError} />
+
+        {isLoadingPrices && <p className="text-sm text-gray-600">Loading price history...</p>}
+        {!isLoadingPrices && priceError && <p className="text-sm text-red-600">{priceError}</p>}
+        {!isLoadingPrices && !priceError && prices.length > 0 && <PriceChart data={prices} />}
       </div>
     </main>
   );
