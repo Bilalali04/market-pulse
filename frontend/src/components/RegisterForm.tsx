@@ -1,25 +1,20 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { loginRequest } from "../lib/api";
+import { registerRequest } from "../lib/api";
 import { FormField } from "./FormField";
 
-export function LoginForm() {
+// Must match MIN_PASSWORD_LENGTH in backend/src/auth/validation.ts
+const MIN_PASSWORD_LENGTH = 8;
+
+export function RegisterForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("registered") === "1") {
-      setSuccessMessage("Account created. Please log in.");
-    }
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,11 +25,15 @@ export function LoginForm() {
       return;
     }
 
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const { token } = await loginRequest(email, password);
-      localStorage.setItem("token", token);
-      router.push("/dashboard");
+      await registerRequest(email, password);
+      router.push("/login?registered=1");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -44,7 +43,6 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
-      {successMessage && <p className="text-sm text-green-600">{successMessage}</p>}
       <FormField id="email" label="Email" type="email" value={email} onChange={setEmail} />
       <FormField id="password" label="Password" type="password" value={password} onChange={setPassword} />
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -53,12 +51,12 @@ export function LoginForm() {
         disabled={isSubmitting}
         className="rounded bg-blue-600 px-3 py-2 text-white disabled:opacity-50"
       >
-        {isSubmitting ? "Logging in..." : "Log in"}
+        {isSubmitting ? "Creating account..." : "Create account"}
       </button>
       <p className="text-sm text-gray-600">
-        Need an account?{" "}
-        <Link href="/register" className="text-blue-600 underline">
-          Register
+        Already have an account?{" "}
+        <Link href="/login" className="text-blue-600 underline">
+          Log in
         </Link>
       </p>
     </form>

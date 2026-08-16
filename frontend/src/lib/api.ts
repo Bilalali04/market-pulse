@@ -21,3 +21,32 @@ export async function loginRequest(email: string, password: string): Promise<Log
 
   return response.json();
 }
+
+export interface RegisterResult {
+  id: string;
+  email: string;
+  role: string;
+}
+
+export async function registerRequest(email: string, password: string): Promise<RegisterResult> {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (response.status === 409) {
+    throw new Error("An account with this email already exists.");
+  }
+
+  if (response.status === 400) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error ?? "Invalid registration details.");
+  }
+
+  if (!response.ok) {
+    throw new Error("Something went wrong. Please try again.");
+  }
+
+  return response.json();
+}
