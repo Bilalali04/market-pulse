@@ -39,3 +39,54 @@ be bypassed to see an empty/placeholder page shell for a moment before
 redirecting. Adding `middleware.ts` for server-side redirect (avoiding
 even that placeholder flash) is a reasonable later hardening step, not
 required for this stage.
+
+## Fundamentals data source: Finnhub over Kaggle (Day 3)
+Considered seeding the `fundamentals` table from a static Kaggle dataset
+(consistent with the architecture note that fundamentals change slowly and
+don't need to be real-time), but Kaggle's readily available fundamentals
+datasets don't include sector/industry classification or anything
+interest-income-related, both of which the halal screener needs. Finnhub
+was used instead: we already have the WebSocket integration and API key
+from Day 3's ingestion work, and Finnhub's REST endpoints
+(`/stock/profile2`, `/stock/metric`) cover sector and enough debt data to
+be useful. No new data source or credential was introduced just for this.
+
+## Interest-income criterion dropped from halal screener scope (Day 3)
+The halal screener's original scope (per `CLAUDE.md`) included an
+interest-income ratio check alongside sector and debt-to-market-cap.
+Finnhub's free tier does not expose an interest-income line item that can
+be pulled cleanly, and there is no reliable derivation from the fields
+that are available (unlike debt-to-market-cap, see below). Rather than
+fabricate or approximate a number for it, the criterion is dropped from
+scope entirely: the `fundamentals` table has no interest-income column,
+and the screener will only ever check sector and debt-to-market-cap. If a
+paid data source is added later this can be revisited.
+
+Related methodology note: Finnhub's free tier also doesn't expose a raw
+total-debt dollar figure, only debt/equity ratios and per-share book
+value. `debtToMarketCap` is derived from real reported figures (book value
+per share x shares outstanding = total equity, then apply the reported
+debt/equity ratio to get total debt, divide by market cap) rather than
+fabricated; if any input is missing, the result is `null`, never guessed.
+See `backend/src/screener/finnhubFundamentalsFetcher.ts`.
+
+## Fundamentals seed script reuses the Finnhub fetcher (Day 3)
+`backend/src/screener/seed-fundamentals.ts` (one-off script) calls the
+same `FinnhubFundamentalsFetcher` that would power a future scheduled
+refresh job. There is no separate "refresh" code path: refreshing
+fundamentals later is the same fetch-and-upsert call, just re-run on a
+schedule against the existing watchlist, since fundamentals change slowly
+enough that a from-scratch refresh mechanism isn't warranted yet.
+
+## Known limitation: Finnhub sector granularity is too coarse for gambling (Day 3)
+WYNN was deliberately included in the Day 3 seed watchlist as a
+known-should-fail case for the future sector-based halal screen (casino
+operator). Finnhub's `finnhubIndustry` classification returned
+`Hotels, Restaurants & Leisure` for WYNN, the same bucket as non-gambling
+peers like MCD, rather than a distinct gambling label. A naive
+sector-string-match screen (e.g. reject if sector in a blocklist) will not
+catch WYNN on classification alone. Not fixed as part of Day 3, since
+fixing it belongs to the screening-rules step, not the data-seeding step;
+noted here so whoever builds the rules engine knows sector alone is
+insufficient for gambling exclusion and needs either a finer-grained
+classification source or a name/description-based supplementary check.
