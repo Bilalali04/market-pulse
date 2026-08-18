@@ -3,6 +3,7 @@ import { pool } from "../db/pool";
 import { parseFinnhubMessage, FinnhubTrade } from "./finnhubParser";
 import { dedupeTrades, createDedupeWindowState, checkAndRecordTrade, DedupeWindowState } from "./tradeDedupe";
 import { insertTrades, TradeRecord } from "./tradesProvider";
+import { broadcastTrades } from "../realtime/tradeStreamServer";
 
 const FINNHUB_WS_URL = "wss://ws.finnhub.io";
 const INITIAL_BACKOFF_MS = 1_000;
@@ -198,6 +199,9 @@ export class IngestionService {
     const insertPromise: Promise<void> = insertTrades(records)
       .then((inserted) => {
         this.stats.rowsInserted += inserted;
+        // Broadcast the same post-dedup records that were actually
+        // written, to every currently-connected, authenticated WS client.
+        broadcastTrades(records);
       })
       .catch((err) => {
         console.error(`[ingestion] failed to insert trades: ${err instanceof Error ? err.message : err}`);

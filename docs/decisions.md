@@ -90,3 +90,17 @@ fixing it belongs to the screening-rules step, not the data-seeding step;
 noted here so whoever builds the rules engine knows sector alone is
 insufficient for gambling exclusion and needs either a finer-grained
 classification source or a name/description-based supplementary check.
+
+## Live trade stream: no free/paid tiering (Day 4)
+The original architecture notes described the live WebSocket stream as
+tier-gated: free-tier users would get a limited/delayed view, paid-tier
+users would get the full live stream. That tiering is deliberately dropped
+for the live trade broadcast (`backend/src/realtime/tradeStreamServer.ts`):
+any authenticated user, any role, gets the same full, immediate stream.
+There is no paywall on real-time data in this project. The `authenticate`
+middleware's tier concept (`free`/`paid`/`admin`) still exists and is still
+enforced elsewhere (e.g. `requireRole` on other routes) - this decision is
+scoped specifically to the live trade stream, not a removal of RBAC
+project-wide. If tiering the live stream is wanted later, it would need
+per-connection role tracking and a way to actually delay or filter the
+broadcast per client, neither of which exists today.
