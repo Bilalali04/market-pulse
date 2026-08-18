@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { RequireAuth } from "../../components/RequireAuth";
 import { PriceChart } from "../../components/PriceChart";
 import { ComplianceBadge } from "../../components/ComplianceBadge";
+import { LivePrice } from "../../components/LivePrice";
 import { clearToken, getToken } from "../../lib/token";
 import { priceHistoryRequest, PricePoint, screenerRequest, ScreeningResult } from "../../lib/api";
+import { useTradeStream } from "../../lib/useTradeStream";
 import { WATCHLIST } from "../../lib/watchlist";
 
 function DashboardContent() {
@@ -18,6 +20,7 @@ function DashboardContent() {
   const [screeningResult, setScreeningResult] = useState<ScreeningResult | null>(null);
   const [isLoadingScreening, setIsLoadingScreening] = useState(true);
   const [screeningError, setScreeningError] = useState<string | null>(null);
+  const { latestTrades, status: tradeStreamStatus } = useTradeStream();
 
   useEffect(() => {
     let cancelled = false;
@@ -123,6 +126,8 @@ function DashboardContent() {
             </option>
           ))}
         </select>
+
+        <LivePrice symbol={symbol} trade={latestTrades[symbol]} status={tradeStreamStatus} />
 
         <ComplianceBadge result={screeningResult} isLoading={isLoadingScreening} error={screeningError} />
 
