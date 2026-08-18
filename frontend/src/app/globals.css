@@ -1,3 +1,42 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --paper: #f1f0ea;
+  --ink: #10192e;
+  --slate: #445068;
+  --signal: #1fae6d;
+  --flag: #e4572e;
+  --hairline: #c9c4b6;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+}
+
+@keyframes scroll-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Continuous motion (ticker strip, pulse divider) only runs when the
+   viewer hasn't asked for reduced motion. Outside this query the
+   .animate-scroll elements are simply static, no separate "off" rule
+   needed. */
+@media (prefers-reduced-motion: no-preference) {
+  /* Longhand, not the `animation` shorthand: the shorthand resets
+     animation-duration to 0s as a side effect, which would clobber each
+     element's own Tailwind arbitrary-value duration (e.g.
+     [animation-duration:32s]) depending on cascade order. */
+  .animate-scroll {
+    animation-name: scroll-left;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+}
