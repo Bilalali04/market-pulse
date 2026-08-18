@@ -11,6 +11,10 @@ const MAX_BACKOFF_MS = 30_000;
 // comfortable margin without holding unbounded state.
 const DEDUPE_WINDOW_MS = 10_000;
 const SUMMARY_INTERVAL_MS = 30_000;
+// Bounded fallback in case the WebSocket's "close" event never fires
+// during shutdown (e.g. the socket is already in a stuck state), so
+// stop() can't hang indefinitely.
+const CLOSE_TIMEOUT_MS = 3_000;
 
 interface Stats {
   tradesReceived: number;
@@ -53,9 +57,13 @@ export class IngestionService {
     this.summaryTimer = setInterval(() => this.logSummary(), SUMMARY_INTERVAL_MS);
   }
 
-  // Async: waits for any in-flight insertTrades calls to finish before
-  // returning, so a caller that does `await service.stop(); await
-  // pool.end();` doesn't close the pool out from under a pending write.
+  // Async: waits for the socket to actually finish closing (so the
+  // "connection closed" / "deliberate shutdown" log lines from the
+  // "close" listener in connect() print before this resolves) and for any
+  // in-flight insertTrades calls to finish, so a caller that does `await
+  // service.stop(); await pool.end();` doesn't close the pool out from
+  // under a pending write, and doesn't call process.exit() before this
+  // service's own shutdown logging has printed.
   async stop(): Promise<void> {
     this.isShuttingDown = true;
     if (this.reconnectTimer) {
@@ -64,9 +72,34 @@ export class IngestionService {
     if (this.summaryTimer) {
       clearInterval(this.summaryTimer);
     }
-    this.socket?.close();
+    await this.closeSocketAndWait();
     await Promise.allSettled(this.pendingInserts);
     this.logSummary();
+  }
+
+  // Resolves once the WebSocket's own "close" event has fired (the
+  // listener registered in connect() runs first and does the actual
+  // logging, since it was registered earlier), or after CLOSE_TIMEOUT_MS
+  // if "close" never fires for some reason.
+  private closeSocketAndWait(): Promise<void> {
+    const socket = this.socket;
+    if (!socket || socket.readyState === WebSocket.CLOSED) {
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        console.log("[ingestion] close event did not fire within timeout, continuing shutdown anyway");
+        resolve();
+      }, CLOSE_TIMEOUT_MS);
+
+      socket.once("close", () => {
+        clearTimeout(timeout);
+        resolve();
+      });
+
+      socket.close();
+    });
   }
 
   private connect(): void {
