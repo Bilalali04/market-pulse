@@ -19,7 +19,9 @@ export class InvalidPeriodError extends Error {
   }
 }
 
-function validatePeriod(prices: number[], period: number): void {
+// Exported so macd.ts can reuse the exact same bound check for all three
+// of its periods (fast/slow/signal) instead of re-implementing it.
+export function validatePeriod(prices: (number | null)[], period: number): void {
   if (!Number.isInteger(period) || period <= 0 || period > prices.length) {
     throw new InvalidPeriodError(period, prices.length);
   }
@@ -41,22 +43,37 @@ export function calculateSMA(prices: number[], period: number): (number | null)[
   return result;
 }
 
-export function calculateEMA(prices: number[], period: number): (number | null)[] {
+// Accepts a LEADING run of nulls (e.g. macd.ts's macdLine, which is null
+// until slowEma has enough data, then entirely real numbers) so it can
+// also serve as the composition point for MACD's signal line, without
+// macd.ts reimplementing EMA. Not designed to handle nulls appearing
+// after real data has started - that shape doesn't occur anywhere in
+// this codebase's actual usage.
+//
+// For a null-free array (the original use case), the first non-null
+// index is always 0, so this is byte-identical to the previous
+// implementation for every existing caller - re-verified directly.
+export function calculateEMA(prices: (number | null)[], period: number): (number | null)[] {
   validatePeriod(prices, period);
 
   const result: (number | null)[] = new Array(prices.length).fill(null);
   const multiplier = 2 / (period + 1);
 
-  // Seed with the SMA of the first `period` values.
+  const firstNonNullIndex = prices.findIndex((p) => p !== null);
+  if (firstNonNullIndex === -1 || firstNonNullIndex + period > prices.length) {
+    return result; // no real data, or not enough trailing data for one full window
+  }
+
+  // Seed with the SMA of the first `period` real values.
   let sum = 0;
-  for (let i = 0; i < period; i++) {
-    sum += prices[i];
+  for (let i = firstNonNullIndex; i < firstNonNullIndex + period; i++) {
+    sum += prices[i] as number;
   }
   let previousEma = sum / period;
-  result[period - 1] = previousEma;
+  result[firstNonNullIndex + period - 1] = previousEma;
 
-  for (let i = period; i < prices.length; i++) {
-    const ema = (prices[i] - previousEma) * multiplier + previousEma;
+  for (let i = firstNonNullIndex + period; i < prices.length; i++) {
+    const ema = ((prices[i] as number) - previousEma) * multiplier + previousEma;
     result[i] = ema;
     previousEma = ema;
   }
