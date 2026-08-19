@@ -7,9 +7,14 @@
 // is a programming bug, not recoverable data - it should fail loudly and
 // immediately rather than be silently absorbed into a return value a caller
 // could forget to check.
+// Message intentionally doesn't assert a specific comparison operator
+// (e.g. "<=") since the exact valid boundary differs by function - SMA/EMA
+// need `period` prices, RSI needs `period + 1` (see rsi.ts). Reused as-is
+// across analytics functions; each caller enforces its own correct bound
+// before throwing.
 export class InvalidPeriodError extends Error {
   constructor(period: number, length: number) {
-    super(`period must be a positive integer <= price array length (got period=${period}, length=${length})`);
+    super(`invalid period ${period} for price array of length ${length}`);
     this.name = "InvalidPeriodError";
   }
 }
