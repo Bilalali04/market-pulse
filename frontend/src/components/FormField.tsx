@@ -9,7 +9,7 @@ interface FormFieldProps {
 export function FormField({ id, label, type, value, onChange }: FormFieldProps) {
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium">
+      <label htmlFor={id} className="text-sm font-medium text-ink">
         {label}
       </label>
       <input
@@ -17,7 +17,7 @@ export function FormField({ id, label, type, value, onChange }: FormFieldProps) 
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded border border-gray-300 px-3 py-2"
+        className="rounded border border-hairline bg-paper px-3 py-2 text-ink outline-offset-2 focus:outline focus:outline-2 focus:outline-ink"
       />
     </div>
   );

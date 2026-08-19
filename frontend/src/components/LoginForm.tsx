@@ -45,20 +45,20 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
-      {successMessage && <p className="text-sm text-green-600">{successMessage}</p>}
+      {successMessage && <p className="text-sm text-signal">{successMessage}</p>}
       <FormField id="email" label="Email" type="email" value={email} onChange={setEmail} />
       <FormField id="password" label="Password" type="password" value={password} onChange={setPassword} />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-flag">{error}</p>}
       <button
         type="submit"
         disabled={isSubmitting}
-        className="rounded bg-blue-600 px-3 py-2 text-white disabled:opacity-50"
+        className="rounded bg-ink px-3 py-2 text-paper outline-offset-2 focus:outline focus:outline-2 focus:outline-ink disabled:opacity-50"
       >
         {isSubmitting ? "Logging in..." : "Log in"}
       </button>
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-slate">
         Need an account?{" "}
-        <Link href="/register" className="text-blue-600 underline">
+        <Link href="/register" className="text-ink underline outline-offset-2 focus:outline focus:outline-2 focus:outline-ink">
           Register
         </Link>
       </p>
