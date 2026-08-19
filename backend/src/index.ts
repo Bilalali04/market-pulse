@@ -5,6 +5,7 @@ import { authRouter } from "./api/auth.routes";
 import { debugRouter } from "./api/debug.routes";
 import { screenerRouter } from "./api/screener.routes";
 import { pricesRouter } from "./api/prices.routes";
+import { indicatorsRouter } from "./api/indicators.routes";
 import { createTradeStreamServer, closeTradeStreamServer } from "./realtime/tradeStreamServer";
 import { IngestionService } from "./ingestion/ingestionService";
 import { pool } from "./db/pool";
@@ -23,6 +24,7 @@ app.use("/auth", authRouter);
 app.use("/debug", debugRouter);
 app.use("/screener", screenerRouter);
 app.use("/prices", pricesRouter);
+app.use("/indicators", indicatorsRouter);
 
 // WebSocket server attached to the same HTTP server, not a separate port.
 const server = http.createServer(app);

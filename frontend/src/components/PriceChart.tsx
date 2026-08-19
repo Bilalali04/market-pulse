@@ -14,12 +14,21 @@ const MONO_FONT = "IBM Plex Mono, monospace";
 
 interface PriceChartProps {
   data: PricePoint[];
+  // Aligned index-for-index with `data` (same source: both come from the
+  // same price-history dates). Optional so PriceChart still works before
+  // the indicators fetch resolves, or if it never had SMA data to show.
+  sma?: (number | null)[];
 }
 
-export function PriceChart({ data }: PriceChartProps) {
+export function PriceChart({ data, sma }: PriceChartProps) {
+  const chartData = data.map((point, i) => ({
+    ...point,
+    sma: sma?.[i] ?? null,
+  }));
+
   return (
     <ResponsiveContainer width="100%" height={320}>
-      <LineChart data={data}>
+      <LineChart data={chartData}>
         <CartesianGrid stroke={HAIRLINE} strokeDasharray="3 3" />
         <XAxis
           dataKey="date"
@@ -39,7 +48,18 @@ export function PriceChart({ data }: PriceChartProps) {
           labelStyle={{ color: INK }}
           itemStyle={{ color: INK }}
         />
-        <Line type="monotone" dataKey="closePrice" stroke={INK} dot={false} />
+        <Line type="monotone" dataKey="closePrice" name="Price" stroke={INK} dot={false} />
+        {sma && (
+          <Line
+            type="monotone"
+            dataKey="sma"
+            name="SMA (20)"
+            stroke={SLATE}
+            strokeDasharray="5 4"
+            dot={false}
+            connectNulls={false}
+          />
+        )}
       </LineChart>
     </ResponsiveContainer>
   );

@@ -87,6 +87,40 @@ export interface ScreeningResult {
   reasons: string[];
 }
 
+export interface MacdSeries {
+  macdLine: (number | null)[];
+  signalLine: (number | null)[];
+  histogram: (number | null)[];
+}
+
+export interface IndicatorsResult {
+  symbol: string;
+  dates: string[];
+  sma: (number | null)[];
+  rsi: (number | null)[];
+  macd: MacdSeries;
+}
+
+export async function indicatorsRequest(symbol: string, token: string): Promise<IndicatorsResult> {
+  const response = await fetch(`${API_BASE_URL}/indicators/${symbol}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (response.status === 404) {
+    throw new Error(`No indicator data available for ${symbol}.`);
+  }
+
+  if (response.status === 401) {
+    throw new Error("Your session has expired. Please log in again.");
+  }
+
+  if (!response.ok) {
+    throw new Error("Something went wrong loading indicators. Please try again.");
+  }
+
+  return response.json();
+}
+
 export async function screenerRequest(symbol: string, token: string): Promise<ScreeningResult> {
   const response = await fetch(`${API_BASE_URL}/screener/${symbol}`, {
     headers: { Authorization: `Bearer ${token}` },
