@@ -8,25 +8,30 @@ interface LivePriceProps {
 
 export function LivePrice({ symbol, trade, status }: LivePriceProps) {
   if (status === "auth-error") {
-    return <p className="text-sm text-red-600">Live stream unavailable: your session is invalid.</p>;
+    return <p className="text-sm text-flag">Live stream unavailable: your session is invalid.</p>;
   }
 
   if (!trade) {
     return (
-      <p className="text-sm text-gray-600">
+      <p className="font-mono text-sm text-slate">
         {status === "open" ? `Waiting for a live trade on ${symbol}...` : "Connecting to live stream..."}
       </p>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-baseline gap-3 sm:gap-4">
       <span
-        className={`h-2 w-2 rounded-full ${status === "open" ? "animate-pulse bg-green-500" : "bg-gray-400"}`}
+        aria-hidden="true"
+        className={`h-2.5 w-2.5 shrink-0 self-center rounded-full ${
+          status === "open" ? "animate-pulse bg-signal" : "bg-slate"
+        }`}
       />
-      <span className="text-sm font-medium">Live</span>
-      <span className="text-lg font-semibold">${trade.price.toFixed(2)}</span>
-      <span className="text-xs text-gray-500">as of {new Date(trade.tradedAt).toLocaleTimeString()}</span>
+      <span className="font-mono text-xl text-ink sm:text-2xl">{symbol}</span>
+      <span className="font-mono text-4xl font-medium text-ink sm:text-5xl">${trade.price.toFixed(2)}</span>
+      <span className="font-mono text-xs text-slate sm:text-sm">
+        as of {new Date(trade.tradedAt).toLocaleTimeString()}
+      </span>
     </div>
   );
 }

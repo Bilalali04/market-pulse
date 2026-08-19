@@ -102,39 +102,50 @@ function DashboardContent() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center gap-6 p-8">
-      <div className="flex w-full max-w-2xl items-center justify-between">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <button onClick={handleLogout} className="rounded bg-blue-600 px-3 py-2 text-white">
-          Log out
-        </button>
-      </div>
+    <main className="min-h-screen bg-paper">
+      <header className="flex w-full items-center justify-between border-b border-hairline px-6 py-4 sm:px-8">
+        <span className="font-display text-lg text-ink">Market Pulse</span>
+        <div className="flex items-center gap-3">
+          <label htmlFor="symbol" className="sr-only">
+            Symbol
+          </label>
+          <select
+            id="symbol"
+            value={symbol}
+            onChange={(event) => setSymbol(event.target.value)}
+            className="rounded border border-hairline bg-paper px-3 py-1.5 font-mono text-sm text-ink outline-offset-2 focus:outline focus:outline-2 focus:outline-ink"
+          >
+            {WATCHLIST.map((watchlistSymbol) => (
+              <option key={watchlistSymbol} value={watchlistSymbol}>
+                {watchlistSymbol}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleLogout}
+            className="rounded border border-hairline px-3 py-1.5 text-sm text-ink outline-offset-2 transition-colors hover:border-ink focus:outline focus:outline-2 focus:outline-ink"
+          >
+            Log out
+          </button>
+        </div>
+      </header>
 
-      <div className="flex w-full max-w-2xl flex-col gap-4">
-        <label htmlFor="symbol" className="text-sm font-medium">
-          Symbol
-        </label>
-        <select
-          id="symbol"
-          value={symbol}
-          onChange={(event) => setSymbol(event.target.value)}
-          className="rounded border border-gray-300 px-3 py-2"
-        >
-          {WATCHLIST.map((watchlistSymbol) => (
-            <option key={watchlistSymbol} value={watchlistSymbol}>
-              {watchlistSymbol}
-            </option>
-          ))}
-        </select>
+      <section className="w-full border-b border-hairline px-6 py-8 sm:px-8">
+        <div className="mx-auto max-w-6xl">
+          <LivePrice symbol={symbol} trade={latestTrades[symbol]} status={tradeStreamStatus} />
+        </div>
+      </section>
 
-        <LivePrice symbol={symbol} trade={latestTrades[symbol]} status={tradeStreamStatus} />
-
-        <ComplianceBadge result={screeningResult} isLoading={isLoadingScreening} error={screeningError} />
-
-        {isLoadingPrices && <p className="text-sm text-gray-600">Loading price history...</p>}
-        {!isLoadingPrices && priceError && <p className="text-sm text-red-600">{priceError}</p>}
-        {!isLoadingPrices && !priceError && prices.length > 0 && <PriceChart data={prices} />}
-      </div>
+      <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 px-6 py-8 sm:px-8 lg:grid-cols-3 lg:gap-8">
+        <div className="lg:col-span-2">
+          {isLoadingPrices && <p className="text-sm text-slate">Loading price history...</p>}
+          {!isLoadingPrices && priceError && <p className="text-sm text-flag">{priceError}</p>}
+          {!isLoadingPrices && !priceError && prices.length > 0 && <PriceChart data={prices} />}
+        </div>
+        <div className="lg:col-span-1">
+          <ComplianceBadge result={screeningResult} isLoading={isLoadingScreening} error={screeningError} />
+        </div>
+      </section>
     </main>
   );
 }
