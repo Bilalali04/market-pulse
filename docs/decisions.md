@@ -104,3 +104,52 @@ scoped specifically to the live trade stream, not a removal of RBAC
 project-wide. If tiering the live stream is wanted later, it would need
 per-connection role tracking and a way to actually delay or filter the
 broadcast per client, neither of which exists today.
+
+## price_history backfill replaced: 10-year Kaggle S&P 500 dataset with volume
+The original `price_history` backfill (Day 3-ish, `kaggle-backfill` source)
+came from a wide-format Kaggle CSV that only covered 15 of the 18
+watchlist symbols - AAPL, MO, and WYNN had zero rows, a known gap noted at
+the time in `frontend/src/lib/watchlist.ts`. That dataset is now replaced
+entirely (not merged) with a second Kaggle dataset
+(`SP500_Data_10Y`, one CSV per ticker), imported via
+`backend/src/priceHistory/importSp500History.ts`, which:
+- covers all 18 watchlist symbols (closes the AAPL/MO/WYNN gap)
+- spans 10 years (2015-12-21 to 2025-12-19) instead of the original ~4
+- includes real per-day volume, which `price_history` previously had no
+  column for at all (added via migration
+  `1787156413776_add-volume-to-price-history`, `ALTER TABLE ... ADD
+  COLUMN`, not a drop/recreate)
+
+The old script (`importPriceHistory.ts`) and its source file
+(`data/stocks.csv`) were deleted rather than left alongside the new one:
+keeping a script that reads a since-deleted, inferior, now-superseded
+data source around would just be dead code someone could accidentally
+re-run. The new import truncates `price_history` before inserting
+(`source = 'kaggle-sp500-10y'`, distinct from the old `kaggle-backfill`
+value) - this is a deliberate full replacement, not a merge, run inside a
+single transaction so a partial failure can't leave the table half
+truncated.
+
+Data quirk worth knowing if this is ever touched again: NVDA's pre-split
+(2016-2019) rows show close prices in the $1-4 range and correspondingly
+huge volume figures (up to ~3.69 billion shares on 2017-06-09) - this
+dataset is split-adjusted (NVDA had a 4:1 split in 2021 and a 10:1 split
+in 2024), and volume is adjusted along with price to keep price x volume
+economically consistent across the split boundary. Confirmed this is a
+real characteristic of the source data, not an import bug, by checking
+which symbol/dates produced the outlier and cross-referencing NVDA's
+known split history - not something to "fix" by rescaling, since that
+would mean fabricating a correction not present in the source.
+
+**Methodology note, not a data note:** the single-symbol logistic
+regression result (47.18% model vs 46.67% baseline) and the pooled
+15-symbol result (50.05% model vs 51.00% baseline, model behind) were
+both computed against the *old* `kaggle-backfill` data - shorter history,
+15 symbols, no volume. Both results are superseded by this data
+replacement (the underlying rows they were computed from no longer
+exist) and would need to be re-run against the new dataset to still be
+meaningful numbers. They're not deleted from the earlier conversation
+record because the *methodology* (chronological split, train-only
+standardization, validation-only tuning, one-time test evaluation) is
+still valid and worth keeping as documented reasoning - only the specific
+reported numbers no longer describe live data.
