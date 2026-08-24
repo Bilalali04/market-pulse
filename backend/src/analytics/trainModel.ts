@@ -104,7 +104,7 @@ export function trainModel(
   };
 }
 
-function evaluateBinaryClassifier(actual: number[], predicted: number[]): EvaluationResult {
+export function evaluateBinaryClassifier(actual: number[], predicted: number[]): EvaluationResult {
   let truePositive = 0;
   let trueNegative = 0;
   let falsePositive = 0;
