@@ -86,6 +86,7 @@ This is the strongest engineering story in the project.
 ### Authenticated, tiered access control
 
 - JWT-based auth (`bcrypt`-hashed passwords, signed access tokens) with an RBAC middleware (`requireRole`) enforcing `free` / `paid` / `admin` tiers at the REST layer.
+- **Google OAuth as an alternative sign-in method**, alongside password-based auth, verified against a real Google account through the actual consent flow (not mocked): users are matched by `google_id`, not email. A collision with an existing local-password account for the same email is rejected, not silently linked — this project's local registration never verifies email ownership, so merging on email match alone would let anyone claiming an existing user's email via Google OAuth take over that account. The schema backs this with a provider-aware CHECK constraint (`local` requires a password, `google` requires a `google_id`), not a nullable free-for-all that could produce a half-configured row.
 - **The live WebSocket stream deliberately has no tiering.** Any authenticated user, any role, gets the same full, immediate trade stream — this was a conscious decision, not an oversight: there's no real business model in this project that would justify gating real-time data, so building differential delay/filtering logic for a paywall that doesn't exist would just be unjustified complexity. RBAC still fully applies elsewhere (REST routes), this decision is scoped specifically to the live broadcast.
 - **A real timing side-channel, found and fixed**: the login flow originally short-circuited immediately on "no such user," while "wrong password" always paid the full `bcrypt.compare` cost — meaning response timing could theoretically distinguish the two cases even though both returned an identical generic 401. Fixed by comparing against a fixed, precomputed dummy bcrypt hash on the no-user path, so it pays the same cost every time.
 - **JWT staleness is explained, not silently ignored**: because access tokens are stateless and carry the role at issuance, a role change in the database doesn't take effect until the user re-authenticates. Confirmed directly (an already-issued `free`-tier token still 403'd against a paid-gated route immediately after the DB role update, until re-login). This is a deliberate, bounded consequence of the access-token-only design — worst case staleness is capped by the token's 1-hour expiry — not a bug.
@@ -125,7 +126,7 @@ The original scope also included an interest-income ratio check; it was explicit
 
 ### Full auth flow, design system, dashboard
 
-Register → login → logout, JWT stored client-side. A small, consistent design token system (`paper` / `ink` / `slate` / `signal` / `flag` / `hairline` colors, Newsreader/Inter/IBM Plex Mono typefaces) applied across the homepage, auth pages, and dashboard. The dashboard itself pulls from four genuinely independent data sources per symbol — live trade stream, historical price chart, computed indicators, and the compliance screen — each with its own loading/error state, not a single monolithic fetch.
+Register → login → logout (password or Google), JWT stored client-side. A small, consistent design token system (`paper` / `ink` / `slate` / `signal` / `flag` / `hairline` colors, Newsreader/Inter/IBM Plex Mono typefaces) applied across the homepage, auth pages, and dashboard. The dashboard itself pulls from four genuinely independent data sources per symbol — live trade stream, historical price chart, computed indicators, and the compliance screen — each with its own loading/error state, not a single monolithic fetch.
 
 ## Tech stack
 
@@ -135,7 +136,7 @@ Register → login → logout, JWT stored client-side. A small, consistent desig
 | Realtime | `ws` (WebSocket server, same HTTP server/process as the API) |
 | Database | PostgreSQL, hosted on Neon |
 | Migrations | `node-pg-migrate` (plain SQL migrations) |
-| Auth | `jsonwebtoken`, `bcryptjs` |
+| Auth | `jsonwebtoken`, `bcryptjs`, `google-auth-library` |
 | Market data | Finnhub (WebSocket for live ticks, REST for fundamentals) |
 | Frontend | Next.js (App Router), TypeScript (strict mode), Tailwind CSS |
 | Charts | Recharts |
@@ -158,6 +159,8 @@ A handful of the more specific findings from `docs/decisions.md`, which has the 
 - **JWT staleness on role change**: a documented, deliberate consequence of stateless access tokens — a role change doesn't take effect until re-login, bounded by the token's 1-hour expiry. Confirmed directly against a real role change rather than assumed.
 - **Ingestion shutdown race**: `process.exit(0)` could run ahead of the WebSocket's own close event, breaking shutdown log ordering. Fixed by making shutdown explicitly await the real close event (with a bounded timeout fallback), then verified with three real live 15-second ingestion runs during market hours.
 - **WYNN sector misclassification**: Finnhub's sector data alone can't distinguish a casino operator from a hotel chain. Fixed with a small, evidence-based manual override rather than a broad pattern guessed ahead of data.
+- **Google account collision handling**: a Google sign-in whose email matches an existing local-password account is rejected, not auto-linked — local registration never verifies email ownership, so merging on email match alone would be a real account-takeover vector, not just an edge case.
+- **JWT delivered via URL fragment, not query param**: the OAuth callback redirects to the frontend with the token after `#`, not `?` — fragments are never sent to or logged by the server at all, closing off a leak channel a query param would carry (it can still land in browser history, a residual risk noted directly in the code).
 
 ## Local setup
 
@@ -171,7 +174,8 @@ npm install
 
 # 2. Configure environment
 cp .env.example .env
-# fill in DATABASE_URL, JWT_SECRET, FINNHUB_API_KEY, FRONTEND_ORIGIN
+# fill in DATABASE_URL, JWT_SECRET, FINNHUB_API_KEY, FRONTEND_ORIGIN,
+# GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI
 
 # 3. Local Postgres (skip if pointing DATABASE_URL at Neon instead)
 docker-compose up -d
@@ -205,3 +209,4 @@ npm run dev
 - **The halal screener's sector patterns are only as tested as the current watchlist**: several exclusion categories (alcohol, gambling as a generic pattern, conventional weapons) have no confirmed real-world match yet because no symbol in the watchlist falls into them by a matchable label — WYNN's gambling exclusion works via the manual override, not the generic pattern. Adding a symbol from one of those untested categories could reveal a similarly-needed override.
 - **Volume is now in the schema but not yet used anywhere** — a recent dataset replacement added real daily volume to `price_history`, but neither the indicators nor the ML feature set use it yet. A legitimate next step, not attempted here to avoid fabricating a feature that hasn't been verified.
 - **No CI pipeline** — tests and verification in this project have so far been run manually (and, per `docs/decisions.md`, quite rigorously) rather than gated in an automated pipeline.
+- **No account-linking flow**: a user who registers with a password can't later add Google sign-in to that same account, and vice versa — each email is tied to exactly one `auth_provider`, enforced by the `users` table's CHECK constraint. A real, deliberate scope decision (already noted in `googleAuth.ts`'s own code comment), not an oversight discovered now.
