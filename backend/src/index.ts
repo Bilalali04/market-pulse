@@ -2,6 +2,7 @@ import http from "http";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { authRouter } from "./api/auth.routes";
+import { googleAuthRouter } from "./api/googleAuth.routes";
 import { debugRouter } from "./api/debug.routes";
 import { screenerRouter } from "./api/screener.routes";
 import { pricesRouter } from "./api/prices.routes";
@@ -21,6 +22,7 @@ app.get("/health", (_req: Request, res: Response) => {
 });
 
 app.use("/auth", authRouter);
+app.use("/auth", googleAuthRouter);
 app.use("/debug", debugRouter);
 app.use("/screener", screenerRouter);
 app.use("/prices", pricesRouter);
