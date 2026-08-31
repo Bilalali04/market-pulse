@@ -6,6 +6,7 @@ import Link from "next/link";
 import { loginRequest } from "../lib/api";
 import { setToken } from "../lib/token";
 import { FormField } from "./FormField";
+import { GoogleSignInButton } from "./GoogleSignInButton";
 
 export function LoginForm() {
   const router = useRouter();
@@ -19,6 +20,9 @@ export function LoginForm() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("registered") === "1") {
       setSuccessMessage("Account created. Please log in.");
+    }
+    if (params.get("googleError") === "email_registered_locally") {
+      setError("An account with that email already exists. Please log in with your password instead.");
     }
   }, []);
 
@@ -56,6 +60,12 @@ export function LoginForm() {
       >
         {isSubmitting ? "Logging in..." : "Log in"}
       </button>
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-hairline" />
+        <span className="text-xs text-slate">or</span>
+        <div className="h-px flex-1 bg-hairline" />
+      </div>
+      <GoogleSignInButton />
       <p className="text-sm text-slate">
         Need an account?{" "}
         <Link href="/register" className="text-ink underline outline-offset-2 focus:outline focus:outline-2 focus:outline-ink">

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { registerRequest } from "../lib/api";
 import { FormField } from "./FormField";
+import { GoogleSignInButton } from "./GoogleSignInButton";
 
 // Must match MIN_PASSWORD_LENGTH in backend/src/auth/validation.ts
 const MIN_PASSWORD_LENGTH = 8;
@@ -53,6 +54,12 @@ export function RegisterForm() {
       >
         {isSubmitting ? "Creating account..." : "Create account"}
       </button>
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-hairline" />
+        <span className="text-xs text-slate">or</span>
+        <div className="h-px flex-1 bg-hairline" />
+      </div>
+      <GoogleSignInButton />
       <p className="text-sm text-slate">
         Already have an account?{" "}
         <Link href="/login" className="text-ink underline outline-offset-2 focus:outline focus:outline-2 focus:outline-ink">
